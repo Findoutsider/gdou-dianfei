@@ -1,12 +1,25 @@
 import requests
 
-from exception.exceptions import AuthFailedException, NoAuthException
-from storage.request_models import *
-from storage.response_models import *
-from utils.passwd import decrypt, encrypt
+from ._crypto import encrypt
+from ._exceptions import AuthFailedException, NoAuthException
+from ._models import (
+    EleBalanceRequest,
+    EleBalanceResponse,
+    EleBalanceResponseData,
+    GetEleBalanceUrl,
+    GetRoomListUrl,
+    GetUserInfoUrl,
+    LoginRequest,
+    LoginResponse,
+    LoginResponseData,
+    LoginUrl,
+    RoomListResponse,
+    UserInfoResponse,
+    UserInfoResponseData,
+)
 
 
-class EBService:
+class EBClient:
     def __init__(self, username: str, password: str, login_type: int = 1):
         self.username = username
         self.password = password
@@ -16,7 +29,8 @@ class EBService:
         self.isAuthenticated = False
         self.session = requests.Session()
         self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/89.0.4389.90 Safari/537.36",
         })
 
     def _post(self, url: str, data: dict = None, json: dict = None) -> requests.Response:
@@ -28,7 +42,7 @@ class EBService:
     def login(self) -> LoginResponseData:
         password = encrypt(self.password)
         data = LoginRequest(username=self.username, password=password, loginType=self.login_type)
-        response = self._post(LoginUrl, json=data.__dict__)
+        response = self._post(LoginUrl, json=data.model_dump())
         response_data = LoginResponse(**response.json())
 
         if response_data.code != 200:
@@ -37,7 +51,6 @@ class EBService:
         self.token = response_data.data.accessToken
         self.session.headers.update({"Authorization": f"{self.token}"})
         self.isAuthenticated = True
-
         return response_data.data
 
     def get_user_info(self) -> UserInfoResponseData:
@@ -48,7 +61,6 @@ class EBService:
         response_data = UserInfoResponse(**response.json())
         if response_data.code != 200:
             raise Exception(response_data.msg)
-
         return response_data.data
 
     def get_room_list(self) -> RoomListResponse:
@@ -69,30 +81,22 @@ class EBService:
         if not self.roomCode:
             self.get_room_list()
 
-        roomIndex = roomIndex - 1
-
-        data = EleBalanceRequest(useEleType=2, roomCode=self.roomCode[roomIndex])
-
-        response = self._post(GetEleBalanceUrl, json=data.__dict__)
+        data = EleBalanceRequest(useEleType=2, roomCode=self.roomCode[roomIndex - 1])
+        response = self._post(GetEleBalanceUrl, json=data.model_dump())
         response_data = EleBalanceResponse(**response.json())
         if response_data.code != 200:
             raise Exception(response_data.msg)
-
         return response_data.data
 
     def get_light_ele_balance(self, roomIndex: int = 1) -> EleBalanceResponseData:
         if not self.isAuthenticated:
             raise NoAuthException("请先登录")
-        if self.roomCode == []:
+        if not self.roomCode:
             self.get_room_list()
 
-        roomIndex = roomIndex - 1
-
-        data = EleBalanceRequest(useEleType=3, roomCode=self.roomCode[roomIndex])
-
-        response = self._post(GetEleBalanceUrl, json=data.__dict__)
+        data = EleBalanceRequest(useEleType=3, roomCode=self.roomCode[roomIndex - 1])
+        response = self._post(GetEleBalanceUrl, json=data.model_dump())
         response_data = EleBalanceResponse(**response.json())
         if response_data.code != 200:
             raise Exception(response_data.msg)
-
         return response_data.data

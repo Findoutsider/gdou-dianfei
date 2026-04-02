@@ -2,7 +2,27 @@ from typing import Any
 
 from pydantic import BaseModel
 
+# API URLs
+LoginUrl = "https://dkgl.gdou.edu.cn/kbp/auth/app/userLogin"
+GetEleBalanceUrl = "https://dkgl.gdou.edu.cn/kbp/ele/wechat/ele/eleBalance"
+GetUserInfoUrl = "https://dkgl.gdou.edu.cn/kbp/auth/userInfo"
+GetRoomListUrl = "https://dkgl.gdou.edu.cn/kbp/ele/mobile/assigned/room/list"
 
+
+# 请求体
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+    loginType: int = 1
+
+
+class EleBalanceRequest(BaseModel):
+    # 1为宿舍，2为空调，3为照明，4为插座
+    useEleType: int
+    roomCode: str
+
+
+# 返回体
 class UserInfoResponseData(BaseModel):
     userId: int
     username: str
